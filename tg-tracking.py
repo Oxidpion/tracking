@@ -1,8 +1,11 @@
 import telegram.ext as tg
 import logging
 
+from sqlalchemy.engine import Engine, create_engine
 from telegram import Bot, Update
 from telegram.ext import run_async
+
+from db import initialize_table
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
@@ -20,10 +23,12 @@ class Config:
         self.proxy_username = 'htc-proxy'
         self.proxy_password = 'Turbulentus@132'
 
+        self.dsn_db = 'sqlite:///sqlite.db'
+
 
 class BotTracking:
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, engine: Engine):
         self.updater = tg.Updater(config.token, workers=1, request_kwargs={
             'proxy_url': config.proxy_url,
             'urllib3_proxy_kwargs': {
@@ -71,5 +76,8 @@ class BotTracking:
 if __name__ == '__main__':
     config = Config()
 
-    bot = BotTracking(config)
+    engine = create_engine(config.dsn_db, echo=True)
+    initialize_table(engine)
+
+    bot = BotTracking(config, engine)
     bot.run()
