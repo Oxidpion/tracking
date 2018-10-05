@@ -1,4 +1,4 @@
-python-telegram-bot[socks]
+python-telegram-bot
 PySocks
 sqlalchemy
 python-redmine
