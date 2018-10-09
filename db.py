@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey, Text, Boolean
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, Session
@@ -59,31 +59,30 @@ class RedmineUser(Base):
         return self.name == '' and self.key == ''
 
 
-class RedmineTrackTask(Base):
-    __tablename__ = 'rm_track_task'
+class TimeEntry(Base):
+    __tablename__ = 'time_entry'
     id = Column(Integer, primary_key=True)
-    date = Column(Date)
-    worktime = Column(Float, nullable=False, default=0)
-    comment = Column(Text)
+    spent_on = Column(Date)
+    hours = Column(Float, nullable=False, default=0)
+    comments = Column(Text)
+    saved = Column(Boolean, nullable=False, default=False)
 
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship('User')
 
-    task_id = Column(Integer, ForeignKey('rm_task.id'))
-    task = relationship('RedmineTask')
+    issue_id = Column(Integer, ForeignKey('issue.id'))
 
     def __repr__(self) -> str:
-        return 'RedmineTrackTask<txid=%s,user_id=%s,task_id=%s,date=%s,track_time=%s>' % (
-            self.txid, self.user_id, self.task_id, self.date, self.worktime)
+        return 'TimeEntryБuser_id=%s,task_id=%s,date=%s,track_time=%s>' % (self.user_id, self.issue_id, self.spent_on, self.hours)
 
 
-class RedmineTask(Base):
-    __tablename__ = 'rm_task'
+class Issue(Base):
+    __tablename__ = 'issue'
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
 
     def __repr__(self) -> str:
-        return 'RedmineTask<id=%s,name=%s>' % (self.id, self.name)
+        return 'Issue<id=%s,name=%s>' % (self.id, self.name)
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -91,15 +90,15 @@ class RedmineTask(Base):
 
 def initialize_table(engine: Engine):
     create_tables = False
-    for model in [TelegramUser, RedmineUser, User, RedmineTask, RedmineTrackTask]:
+    for model in [TelegramUser, RedmineUser, User, Issue, TimeEntry]:
         if not engine.dialect.has_table(engine, model.__table__.name):
             model.__table__.create(bind=engine)
             create_tables = True
 
     if create_tables:
         session = create_session(engine)
-        task1 = RedmineTask('Task 1')
-        task2 = RedmineTask('Task 2')
+        task1 = Issue('Task 1')
+        task2 = Issue('Task 2')
 
         session.add_all((task1, task2))
         session.commit()
@@ -116,13 +115,10 @@ def find_user(session: Session, telegram_id: int):
     return session.query(User).join(TelegramUser).filter(TelegramUser.id == telegram_id).one_or_none()
 
 
-def get_all_task(session: Session) -> List[RedmineTask]:
-    return session.query(RedmineTask).all()
+def get_all_task(session: Session) -> List[Issue]:
+    return session.query(Issue).all()
 
 
-def find_task(session: Session, task_id: int) -> RedmineTask:
-    return session.query(RedmineTask).filter(RedmineTask.id == task_id).one()
+def find_track(session: Session, id: int) -> TimeEntry:
+    return session.query(TimeEntry).filter(TimeEntry.id == id).one()
 
-
-def find_track(session: Session, txid: int) -> RedmineTrackTask:
-    return session.query(RedmineTrackTask).filter(RedmineTrackTask.txid == txid).one()
